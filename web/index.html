@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lab Scheduler</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script>
+    try { var saved = localStorage.getItem('lab-theme'); if (saved) document.documentElement.dataset.theme = saved; } catch (e) {}
+  </script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true"></span>
+    <div>
+      <h1>Lab Scheduler</h1>
+      <p>Who gets which computer, and when</p>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <span class="control-label" id="policy-label">Scheduling policy</span>
+      <div class="seg" role="group" aria-labelledby="policy-label" id="policy-seg">
+        <button type="button" data-policy="FCFS" title="First-come, first-served">FCFS</button>
+        <button type="button" data-policy="SJF" title="Shortest job first">Shortest job</button>
+        <button type="button" data-policy="PRIORITY" title="Priority">Priority</button>
+      </div>
+    </div>
+
+    <div class="control">
+      <span class="control-label" id="pc-label">Computers</span>
+      <div class="stepper" role="group" aria-labelledby="pc-label">
+        <button type="button" id="pc-minus" aria-label="One fewer computer">−</button>
+        <input id="pc-input" type="number" min="1" max="100" inputmode="numeric" aria-label="Number of computers">
+        <button type="button" id="pc-plus" aria-label="One more computer">+</button>
+      </div>
+    </div>
+
+    <div class="control">
+      <span class="control-label">Files</span>
+      <div class="btn-row">
+        <button type="button" class="btn" id="btn-save">Save</button>
+        <button type="button" class="btn" id="btn-load">Load</button>
+        <a class="btn" id="btn-export" href="/api/export" download="lab-schedule.txt">Export</a>
+        <button type="button" class="btn" id="btn-import">Import</button>
+        <input type="file" id="import-file" accept=".txt,text/plain" hidden>
+      </div>
+    </div>
+
+    <button type="button" class="btn icon-btn" id="btn-theme" aria-label="Switch between light and dark theme" title="Switch theme">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9c0-.5-.05-1-.14-1.47A6 6 0 0 1 12.47 3.14 9.1 9.1 0 0 0 12 3z" fill="currentColor"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="layout">
+
+  <aside class="side">
+    <section class="panel" aria-labelledby="add-h">
+      <h2 id="add-h">Add a request</h2>
+      <form id="add-form" novalidate>
+        <div class="field">
+          <label for="f-id">Student ID</label>
+          <input id="f-id" maxlength="16" placeholder="Leave blank to auto-number" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="f-arrival">Arrives at (min)</label>
+            <input id="f-arrival" type="number" min="0" step="1" value="0" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label for="f-duration">Session length (min)</label>
+            <input id="f-duration" type="number" min="1" step="1" value="30" inputmode="numeric">
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-priority">Priority</label>
+          <select id="f-priority">
+            <option value="1">1 – Urgent</option>
+            <option value="2">2 – High</option>
+            <option value="3" selected>3 – Normal</option>
+            <option value="4">4 – Low</option>
+            <option value="5">5 – Lowest</option>
+          </select>
+          <small id="priority-hint"></small>
+        </div>
+        <p class="form-error" id="form-error" role="alert"></p>
+        <button type="submit" class="btn primary wide">Add request</button>
+      </form>
+    </section>
+
+    <section class="panel" aria-labelledby="sample-h">
+      <h2 id="sample-h">Sample data</h2>
+      <div class="sample-grid">
+        <button type="button" class="btn" id="btn-example" title="2 computers, 3 students: the worked example from the project plan">Plan example</button>
+        <button type="button" class="btn" id="btn-demo" title="3 computers, 12 students">Demo lab</button>
+        <div class="random-group">
+          <label for="f-count" class="visually-hidden">Number of random students</label>
+          <input id="f-count" type="number" min="1" max="100" value="24" inputmode="numeric">
+          <button type="button" class="btn" id="btn-random">Random students</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel requests" aria-labelledby="req-h">
+      <div class="panel-head">
+        <h2 id="req-h">Requests <span class="count" id="req-count"></span></h2>
+        <button type="button" class="btn quiet" id="btn-clear">Clear all</button>
+      </div>
+      <div class="table-scroll">
+        <table class="req-table">
+          <thead>
+            <tr><th scope="col">Student</th><th scope="col" class="num">Arrives</th><th scope="col" class="num">Length</th><th scope="col" class="num" id="th-pri">Priority</th><th scope="col"><span class="visually-hidden">Remove</span></th></tr>
+          </thead>
+          <tbody id="req-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </aside>
+
+  <main class="main">
+    <p class="policy-desc" id="policy-desc"></p>
+
+    <dl class="kpis" id="kpis" aria-label="Results for the current schedule"></dl>
+
+    <div class="tabs" role="tablist" aria-label="Views">
+      <button type="button" role="tab" id="tab-sim" data-tab="sim" aria-selected="true" aria-controls="panel-sim">Simulation</button>
+      <button type="button" role="tab" id="tab-schedule" data-tab="schedule" aria-selected="false" aria-controls="panel-schedule" tabindex="-1">Schedule</button>
+      <button type="button" role="tab" id="tab-compare" data-tab="compare" aria-selected="false" aria-controls="panel-compare" tabindex="-1">Compare policies</button>
+      <button type="button" role="tab" id="tab-capacity" data-tab="capacity" aria-selected="false" aria-controls="panel-capacity" tabindex="-1">How many computers?</button>
+    </div>
+
+    <!-- Simulation -->
+    <section id="panel-sim" role="tabpanel" aria-labelledby="tab-sim">
+      <div class="playbar">
+        <button type="button" class="btn primary" id="btn-play">Play</button>
+        <button type="button" class="btn" id="btn-restart">Restart</button>
+        <div class="time-block">
+          <label for="time-slider" class="visually-hidden">Simulated time</label>
+          <input type="range" id="time-slider" min="0" max="0" step="1" value="0">
+          <output id="time-label" for="time-slider">Minute 0</output>
+        </div>
+        <div class="speed">
+          <label for="speed-select">Speed</label>
+          <select id="speed-select">
+            <option value="3">Slow</option>
+            <option value="8" selected>Normal</option>
+            <option value="20">Fast</option>
+            <option value="60">Very fast</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="floor-wrap">
+        <div class="floor-head">
+          <h2>Lab floor</h2>
+          <dl class="counts" id="counts"></dl>
+        </div>
+        <ul class="floor" id="floor" aria-label="Lab computers"></ul>
+        <div class="queue-row">
+          <h3>Waiting line</h3>
+          <ol class="queue" id="queue" aria-live="off"></ol>
+        </div>
+      </div>
+
+      <div class="gantt-wrap">
+        <div class="gantt-head">
+          <h2>Timeline</h2>
+          <p>Each bar is one session on one computer. Click or drag on the timeline to jump to a moment.</p>
+        </div>
+        <div class="gantt" id="gantt"></div>
+      </div>
+    </section>
+
+    <!-- Schedule table -->
+    <section id="panel-schedule" role="tabpanel" aria-labelledby="tab-schedule" hidden>
+      <div class="schedule-head">
+        <h2>Every session, in start order</h2>
+        <p class="legend"><span class="key key-wait"></span> Waiting <span class="key key-use"></span> Using a computer</p>
+      </div>
+      <div class="table-scroll">
+        <table class="sched-table">
+          <thead>
+            <tr>
+              <th scope="col">Student</th><th scope="col">Computer</th>
+              <th scope="col" class="num">Arrived</th><th scope="col" class="num">Started</th>
+              <th scope="col" class="num">Finished</th><th scope="col" class="num">Waited</th>
+              <th scope="col" class="strip-col">Over time</th>
+            </tr>
+          </thead>
+          <tbody id="sched-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Compare -->
+    <section id="panel-compare" role="tabpanel" aria-labelledby="tab-compare" hidden>
+      <h2>The same requests under each policy</h2>
+      <p class="insight" id="compare-insight"></p>
+      <div class="table-scroll"><table class="cmp-table" id="compare-table"></table></div>
+    </section>
+
+    <!-- Capacity -->
+    <section id="panel-capacity" role="tabpanel" aria-labelledby="tab-capacity" hidden>
+      <h2>What if the lab had more or fewer computers?</h2>
+      <p class="insight" id="capacity-insight"></p>
+      <div class="charts">
+        <figure>
+          <figcaption>Average wait (min)</figcaption>
+          <div id="chart-wait"></div>
+        </figure>
+        <figure>
+          <figcaption>Computer utilization</figcaption>
+          <div id="chart-util"></div>
+        </figure>
+      </div>
+    </section>
+  </main>
+</div>
+
+<dialog id="save-dialog" aria-labelledby="save-h">
+  <form id="save-form" novalidate>
+    <h2 id="save-h">Save to a text file</h2>
+    <p class="dialog-note">Saved on the server in the <code>data</code> folder as a plain .txt file.</p>
+    <div class="field">
+      <label for="save-name">File name</label>
+      <input id="save-name" maxlength="40" placeholder="monday-morning" autocomplete="off" spellcheck="false">
+    </div>
+    <p class="form-error" id="save-error" role="alert"></p>
+    <div class="dialog-actions">
+      <button type="button" class="btn" data-close>Cancel</button>
+      <button type="submit" class="btn primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="load-dialog" aria-labelledby="load-h">
+  <div class="dialog-body">
+    <h2 id="load-h">Load a saved file</h2>
+    <ul class="file-list" id="file-list"></ul>
+    <div class="dialog-actions">
+      <button type="button" class="btn" data-close>Close</button>
+    </div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>
