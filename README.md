@@ -31,6 +31,21 @@ lab_scheduler.exe
 
 Start the server from the project folder (the one containing `web/`).
 
+## Host a public demo
+
+The app can be deployed as a Docker web service (for example, on a host that
+supports deploying a Dockerfile from GitHub). The included `Dockerfile` builds
+the C++ server and packages the browser interface. The server reads `PORT` and
+`LAB_HOST` environment variables; the container sets these to the hosting
+platform's port and `0.0.0.0`.
+
+For a temporary demo, choose a free web-service tier if available. Check the
+provider's current pricing and limits before deploying; free plans can change,
+sleep when idle, or have usage limits. This app has no sign-in, so anyone with
+the URL can change or clear the shared schedule. Its saved text files are not
+persistent on an ephemeral container and may disappear when it restarts. Use
+only sample data, and do not deploy sensitive information.
+
 ## How the scheduler works
 
 Discrete-event simulation in whole minutes (`simulate()` in `src/scheduler.hpp`). Time jumps between events: an arrival, or a session ending.

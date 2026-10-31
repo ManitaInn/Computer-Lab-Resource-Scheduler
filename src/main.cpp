@@ -187,10 +187,21 @@ std::vector<StudentRequest> randomRequests(int count, int computers, unsigned se
 // ------------------------------------------------------------------ main --
 int main(int argc, char** argv) {
     int port = 8080;
+    if (const char* portEnv = std::getenv("PORT"); portEnv && *portEnv) {
+        char* end = nullptr;
+        const long parsedPort = std::strtol(portEnv, &end, 10);
+        if (*end != '\0' || parsedPort < 1 || parsedPort > 65535) {
+            std::cerr << "PORT must be a number between 1 and 65535.\n";
+            return 1;
+        }
+        port = static_cast<int>(parsedPort);
+    }
     if (argc > 1) {
         port = std::atoi(argv[1]);
         if (port < 1 || port > 65535) { std::cerr << "usage: " << argv[0] << " [port]\n"; return 1; }
     }
+    const char* configuredHost = std::getenv("LAB_HOST");
+    const std::string host = configuredHost && *configuredHost ? configuredHost : "127.0.0.1";
 
     // find the folder with index.html (works when started from the project root or from build/)
     std::string webDir = "web";
@@ -413,10 +424,13 @@ int main(int argc, char** argv) {
         res.set_header("Cache-Control", "no-cache");
     });
 
-    std::cout << "Computer Lab Resource Scheduler\n"
-              << "  open  http://127.0.0.1:" << port << "  in your browser\n"
-              << "  press Ctrl+C to stop\n";
-    if (!svr.listen("127.0.0.1", port)) {
+    std::cout << "Computer Lab Resource Scheduler\n";
+    if (host == "127.0.0.1")
+        std::cout << "  open  http://127.0.0.1:" << port << "  in your browser\n";
+    else
+        std::cout << "  listening on " << host << ":" << port << "\n";
+    std::cout << "  press Ctrl+C to stop\n";
+    if (!svr.listen(host, port)) {
         std::cerr << "Could not listen on port " << port << " (is it already in use? try: ./lab_scheduler 8081)\n";
         return 1;
     }
