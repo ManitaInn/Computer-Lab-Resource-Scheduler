@@ -4,11 +4,8 @@ COPY src/ src/
 COPY third_party/ third_party/
 RUN g++ -std=c++17 -O2 -pthread src/main.cpp -Ithird_party -o lab_scheduler
 
-FROM debian:bookworm-slim
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends libstdc++6 \
-    && rm -rf /var/lib/apt/lists/* \
-    && useradd --system --create-home --shell /usr/sbin/nologin scheduler \
+FROM gcc:14-bookworm AS runtime
+RUN useradd --system --create-home --shell /usr/sbin/nologin scheduler \
     && mkdir -p /app/data \
     && chown -R scheduler:scheduler /app
 WORKDIR /app
