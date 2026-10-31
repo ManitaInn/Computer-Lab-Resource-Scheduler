@@ -50,7 +50,7 @@ Ties always fall back to arrival order, so results are repeatable.
 
 Metrics: wait = start − arrival; turnaround = end − arrival; utilization = total session minutes ÷ (computers × minutes from the first arrival to the last finish).
 
-## How it maps to your OS chapters
+## How it maps to OS chapters learn in class
 
 | Chapter | In this project |
 | --- | --- |
@@ -114,9 +114,3 @@ tests/              test_scheduler.cpp
 third_party/        cpp-httplib, nlohmann/json (single headers, MIT licence)
 data/               saved setups
 ```
-
-## Ideas to extend it
-
-- Aging for the Priority policy so low-priority students cannot starve.
-- Round-robin or preemptive SJF, with sessions that can be interrupted.
-- Reservations (a student books a computer for a future time).
