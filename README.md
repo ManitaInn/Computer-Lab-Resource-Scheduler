@@ -10,6 +10,11 @@ browser (web/)  <--JSON over HTTP-->  C++ server (src/main.cpp)  -->  engine (sr
 
 The browser only draws the schedule. Every scheduling decision and every number comes from the C++ code.
 
+## Live demo
+
+Try the hosted app on Render: [Computer Lab Resource Scheduler](https://computer-lab-resource-scheduler.onrender.com/).
+The free service may spin down when idle, so its first request after a period of inactivity can take a little longer.
+
 ## Run it
 
 You need a C++17 compiler (g++ or clang++) and `make`. Both libraries are already included in `third_party/`.
